@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es-CR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta
+    name="description"
+    content="Catálogo de fragancias de [Nombre de la Perfumería] con búsqueda y filtros por categoría, marca y precio."
+  >
+  <meta property="og:locale" content="es_CR">
+  <meta property="og:title" content="[Nombre de la Perfumería] | Catálogo de fragancias">
+  <meta
+    property="og:description"
+    content="Descubrí fragancias para cada estilo en nuestro catálogo."
+  >
+  <title>[Nombre de la Perfumería] | Catálogo de fragancias</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/app.js" defer></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#contenido-principal">Saltar al contenido principal</a>
+
+  <header class="site-header">
+    <div class="container header-layout">
+      <a class="brand" href="#inicio" aria-label="Ir al inicio de [Nombre de la Perfumería]">
+        <span class="brand-mark" aria-hidden="true">NP</span>
+        <span>[Nombre de la Perfumería]</span>
+      </a>
+
+      <!-- Flexbox distribuye la navegación y permite que sus controles se adapten sin usar tablas. -->
+      <nav class="main-nav" aria-label="Navegación principal" role="navigation">
+        <ul class="nav-list">
+          <li><a href="#inicio">Inicio</a></li>
+          <li><a href="#catalogo">Catálogo</a></li>
+          <li><a href="#contacto">Contacto</a></li>
+        </ul>
+      </nav>
+
+      <button
+        class="theme-button"
+        id="theme-toggle"
+        type="button"
+        aria-pressed="false"
+        aria-label="Activar tema oscuro"
+      >
+        <span aria-hidden="true" id="theme-icon">◐</span>
+        <span id="theme-text">Tema oscuro</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="contenido-principal" role="main">
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
+      <div class="container hero-layout">
+        <article class="hero-content">
+          <p class="eyebrow">Fragancias para cada historia</p>
+          <h1 id="hero-title">Encontrá un aroma que hable por vos</h1>
+          <p>
+            Explorá una selección de perfumes originales para mujer, hombre y estilos
+            unisex, con precios claros en colones costarricenses.
+          </p>
+          <a class="primary-link" href="#catalogo">Ver catálogo</a>
+        </article>
+
+        <aside class="hero-aside" aria-labelledby="advice-title">
+          <p class="aside-kicker">Atención personalizada</p>
+          <h2 id="advice-title">¿No sabés cuál elegir?</h2>
+          <p>Te ayudamos a encontrar una fragancia según tus gustos y la ocasión.</p>
+          <a href="#contacto">Solicitar asesoría</a>
+        </aside>
+      </div>
+    </section>
+
+    <section class="catalog-section" id="catalogo" aria-labelledby="catalog-title">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Nuestra colección</p>
+            <h2 id="catalog-title">Catálogo de fragancias</h2>
+          </div>
+          <p id="result-count" aria-live="polite">Cargando productos…</p>
+        </div>
+
+        <!-- role="search" identifica este bloque como un conjunto de controles de búsqueda. -->
+        <form class="filter-panel" id="filter-form" role="search">
+          <div class="field field-search">
+            <label for="search">Buscar por nombre</label>
+            <input
+              id="search"
+              name="search"
+              type="search"
+              placeholder="Ejemplo: Vanilla Creme"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label for="category">Categoría</label>
+            <select id="category" name="category">
+              <option value="todas">Todas</option>
+              <option value="masculino">Masculino</option>
+              <option value="femenino">Femenino</option>
+              <option value="unisex">Unisex</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="brand">Marca</label>
+            <select id="brand" name="brand">
+              <option value="todas">Todas</option>
+              <option value="Lord of Flames">Lord of Flames</option>
+              <option value="Luniche">Luniche</option>
+              <option value="Matin Martin">Matin Martin</option>
+              <option value="Michael Malul">Michael Malul</option>
+              <option value="Vorv">Vorv</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="sort">Ordenar por precio</label>
+            <select id="sort" name="sort">
+              <option value="original">Orden original</option>
+              <option value="ascendente">Menor a mayor</option>
+              <option value="descendente">Mayor a menor</option>
+            </select>
+          </div>
+
+          <button class="secondary-button" id="clear-filters" type="button">
+            Limpiar filtros
+          </button>
+        </form>
+
+        <!-- aria-live anuncia los cambios del catálogo sin interrumpir al lector de pantalla. -->
+        <div
+          class="product-grid"
+          id="product-grid"
+          aria-live="polite"
+          aria-busy="true"
+          aria-label="Resultados del catálogo"
+        ></div>
+
+        <p class="empty-state" id="empty-state" hidden>
+          No encontramos fragancias con esos filtros. Probá con otra búsqueda.
+        </p>
+      </div>
+    </section>
+
+    <section class="contact-section" id="contacto" aria-labelledby="contact-title">
+      <div class="container contact-layout">
+        <div>
+          <p class="eyebrow">Conversemos</p>
+          <h2 id="contact-title">Tu próxima fragancia puede estar acá</h2>
+        </div>
+        <p>
+          Escribinos para consultar disponibilidad, coordinar la entrega o recibir
+          una recomendación personalizada.
+        </p>
+        <a
+          class="primary-link"
+          href="mailto:ventas@example.com"
+          aria-label="Enviar un correo a [Nombre de la Perfumería]"
+        >
+          Contactar
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-layout">
+      <p>
+        &copy; <span id="current-year"></span> [Nombre de la Perfumería].
+        Todos los derechos reservados.
+      </p>
+      <p>Catálogo en español de Costa Rica.</p>
+    </div>
+  </footer>
+</body>
+</html>
