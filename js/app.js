@@ -1,14 +1,24 @@
 "use strict";
 
 const SHEET_ID = "1K0fPgNhIHEVGe-jXJEIzmcuIG8pJMCrmEe1aVFMM4xA";
+const SHEET_TAB_NAME = "BASE DE DATOS";
 const SHEET_API_URL =
-  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+  `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?` +
+  `tqx=out:json&sheet=${encodeURIComponent(SHEET_TAB_NAME)}` +
+  "&range=A4:M&headers=0";
 const STORAGE_KEY = "archivum-parfums-preferencias-v5";
 const FETCH_TIMEOUT_MS = 15000;
+const PRODUCTS_PER_PAGE = 12;
 
 const VALID_AUDIENCES = new Set(["todas", "masculino", "femenino", "unisex"]);
 const VALID_SORTS = new Set(["original", "ascendente", "descendente"]);
 const VALID_THEMES = new Set(["light", "dark"]);
+const PUBLISHED_PRICE_FALLBACKS = new Map([
+  ["AP-1438", 14500],
+  ["AP-2177", 15000],
+  ["AP-2503", 5500],
+  ["AP-1564", 18000]
+]);
 
 /*
  * Taxonomía amplia de acordes inspirada en clasificaciones usadas por
@@ -55,42 +65,6 @@ const NOTE_KEYS_BY_LABEL = new Map(
   NOTE_DEFINITIONS.map((note) => [normalizeText(note.label), note.key])
 );
 
-/*
- * Esta tabla no reemplaza el inventario: únicamente enriquece filas obtenidas
- * por fetch. Las claves reproducen los perfiles solicitados en la
- * especificación v6.0 y los fallbacks apuntan a recursos locales uniformes.
- */
-const fragranticaEnrichment = Object.freeze({
-  "Dragon Collection Lord of Flames": {
-    notas: ["Oriental", "Especiado", "Amaderado"],
-    fallbackImg: "assets/products/product-000.webp"
-  },
-  "Encore I Luniche": {
-    notas: ["Floral", "Cítrico", "Almizclado"],
-    fallbackImg: "assets/products/product-001.webp"
-  },
-  "Tufaah Mujer Luniche": {
-    notas: ["Frutal", "Floral", "Gourmand"],
-    fallbackImg: "assets/products/product-014.webp"
-  },
-  "Crown Hombre Matin Martin": {
-    notas: ["Cítrico", "Amaderado", "Especiado"],
-    fallbackImg: "assets/products/product-071.webp"
-  },
-  "El Dorado Mujer Matin Martin": {
-    notas: ["Floral", "Frutal", "Oriental"],
-    fallbackImg: "assets/products/product-073.webp"
-  },
-  "Vanilla Creme Michael Malul": {
-    notas: ["Gourmand", "Oriental", "Almizclado"],
-    fallbackImg: "assets/products/product-040.webp"
-  },
-  "Aristo Era Vorv": {
-    notas: ["Amaderado", "Oriental", "Cítrico"],
-    fallbackImg: "assets/products/product-052.webp"
-  }
-});
-
 const FRAGRANTICA_ENRICHMENT_BY_KEY = new Map(
   Object.entries(fragranticaEnrichment).map(([productKey, enrichment]) => {
     return [normalizeText(productKey), enrichment];
@@ -115,6 +89,11 @@ const elements = {
   emptyState: document.querySelector("#empty-state"),
   resultCount: document.querySelector("#result-count"),
   sourceNote: document.querySelector("#source-note"),
+  pagination: document.querySelector("#catalog-pagination"),
+  previousPageButton: document.querySelector("#previous-page"),
+  nextPageButton: document.querySelector("#next-page"),
+  pageNumber: document.querySelector("#page-number"),
+  pageTotal: document.querySelector("#page-total"),
   themeButton: document.querySelector("#theme-toggle"),
   themeIcon: document.querySelector("#theme-icon"),
   themeText: document.querySelector("#theme-text"),
@@ -142,6 +121,7 @@ const defaultState = {
 let inventory = [];
 let appState = loadState();
 let inventoryRequestId = 0;
+let currentPage = 1;
 
 function getPreferredTheme() {
   const prefersDark =
@@ -212,18 +192,6 @@ function normalizeText(value) {
     .trim();
 }
 
-function getCatalogImageKey(descriptor) {
-  const normalizedDescriptor = normalizeText(descriptor).replace(/\s+/g, " ");
-  let hash = 0xcbf29ce484222325n;
-
-  for (let index = 0; index < normalizedDescriptor.length; index += 1) {
-    hash ^= BigInt(normalizedDescriptor.charCodeAt(index));
-    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
-  }
-
-  return hash.toString(36);
-}
-
 function cleanText(value, maximumLength = 500) {
   return String(value ?? "")
     .replace(/\s+/g, " ")
@@ -274,11 +242,22 @@ function resolveColumnMap(table) {
 
   const detected = {
     id: findColumnIndex(labels, ["id", "codigo"]),
-    nombre: findColumnIndex(labels, ["nombre", "producto", "fragancia"]),
+    nombre: findColumnIndex(labels, [
+      "nombre",
+      "producto",
+      "fragancia",
+      "perfume"
+    ]),
+    descriptor: findColumnIndex(labels, [
+      "nombre original exacto",
+      "descriptor",
+      "nombre tecnico"
+    ]),
     marca: findColumnIndex(labels, ["marca", "brand"]),
     audiencia: findColumnIndex(labels, [
       "audiencia",
       "publico objetivo",
+      "publico",
       "genero",
       "sexo"
     ]),
@@ -303,16 +282,31 @@ function resolveColumnMap(table) {
    * su estructura pública: A producto, C descripción, D familia, E ocasión,
    * I precio. Si aparecen encabezados semánticos, siempre tienen prioridad.
    */
+  const isStructuredCatalog =
+    detected.id >= 0 &&
+    detected.nombre >= 0 &&
+    detected.marca >= 0 &&
+    detected.imagen >= 0;
+
   return {
     id: detected.id,
     nombre: detected.nombre >= 0 ? detected.nombre : 0,
+    descriptor: detected.descriptor,
     marca: detected.marca,
     audiencia: detected.audiencia,
-    precio: detected.precio >= 0 ? detected.precio : 8,
+    precio: detected.precio >= 0
+      ? detected.precio
+      : isStructuredCatalog
+        ? 7
+        : 8,
     imagen: detected.imagen >= 0 ? detected.imagen : 1,
     notas: detected.notas >= 0 ? detected.notas : 3,
     descripcion: detected.descripcion >= 0 ? detected.descripcion : 2,
-    ocasion: detected.ocasion >= 0 ? detected.ocasion : 4,
+    ocasion: detected.ocasion >= 0
+      ? detected.ocasion
+      : isStructuredCatalog
+        ? -1
+        : 4,
     hasSemanticName: detected.nombre >= 0
   };
 }
@@ -342,7 +336,34 @@ function validateVisualizationPayload(payload) {
     throw new Error("Google Sheets devolvió una respuesta sin datos.");
   }
 
-  return payload.table;
+  const table = payload.table;
+
+  if (table.rows.length === 0) {
+    return table;
+  }
+
+  const headerRow = table.rows[0];
+  const headerLabels = table.cols.map((column, index) => {
+    return cleanText(readCell(headerRow, index), 120) || column.label;
+  });
+  const normalizedHeaders = headerLabels.map(normalizeText);
+  const firstRowIsHeader =
+    normalizedHeaders.includes("codigo") &&
+    normalizedHeaders.includes("perfume") &&
+    normalizedHeaders.includes("marca");
+
+  if (!firstRowIsHeader) {
+    return table;
+  }
+
+  return {
+    ...table,
+    cols: table.cols.map((column, index) => ({
+      ...column,
+      label: headerLabels[index] || column.id
+    })),
+    rows: table.rows.slice(1)
+  };
 }
 
 /*
@@ -461,6 +482,14 @@ function parsePrice(value) {
   }
 
   const cleanedValue = cleanText(value, 40).replace(/[^\d.,-]/g, "");
+
+  if (/^-?\d{1,3}(?:,\d{3})+\.\d+$/.test(cleanedValue)) {
+    return Number(cleanedValue.replace(/,/g, ""));
+  }
+
+  if (/^-?\d{1,3}(?:\.\d{3})+,\d+$/.test(cleanedValue)) {
+    return Number(cleanedValue.replace(/\./g, "").replace(",", "."));
+  }
 
   if (/^\d{1,3}(?:\.\d{3})+$/.test(cleanedValue)) {
     return Number(cleanedValue.replace(/\./g, ""));
@@ -601,13 +630,14 @@ function extractNotes(rawNotes, descriptor, rawDescription) {
     .map((definition) => definition.key);
 }
 
-function getFragranticaEnrichment(productName, brand, audience) {
+function getFragranticaEnrichment(descriptor, productName, brand, audience) {
   const audienceLabel = audience === "femenino"
     ? "Mujer"
     : audience === "masculino"
       ? "Hombre"
       : "";
   const lookupCandidates = [
+    descriptor,
     `${productName} ${brand}`,
     `${productName} ${audienceLabel} ${brand}`
   ];
@@ -639,11 +669,18 @@ function mergeProductNotes(inferredNotes, enrichment) {
     : inferredNotes;
 }
 
-function sanitizeImageUrl(value) {
+function sanitizeImageSource(value) {
   const candidate = cleanText(value, 1000);
 
   if (!candidate) {
     return "";
+  }
+
+  if (
+    /^(?:\.\/)?(?:img|assets)\/[a-z0-9_./-]+\.(?:avif|jpe?g|png|webp)$/i
+      .test(candidate)
+  ) {
+    return candidate.replace(/^\.\//, "");
   }
 
   try {
@@ -656,24 +693,16 @@ function sanitizeImageUrl(value) {
   }
 }
 
-function resolveProductImage(sheetImage, descriptor, enrichmentFallback = "") {
-  const remoteImage = sanitizeImageUrl(sheetImage);
+function resolveProductImage(sheetImage, enrichmentFallback = "") {
+  const sheetImageSource = sanitizeImageSource(sheetImage);
 
-  if (remoteImage) {
-    return remoteImage;
+  if (sheetImageSource) {
+    return sheetImageSource;
   }
 
-  const catalogImageKey = getCatalogImageKey(descriptor);
-
-  if (
-    typeof CATALOG_IMAGE_KEYS !== "undefined" &&
-    CATALOG_IMAGE_KEYS.has(catalogImageKey)
-  ) {
-    return `assets/catalog/${catalogImageKey}.webp`;
-  }
-
-  if (enrichmentFallback) {
-    return enrichmentFallback;
+  const enrichmentImageSource = sanitizeImageSource(enrichmentFallback);
+  if (enrichmentImageSource) {
+    return enrichmentImageSource;
   }
 
   return "";
@@ -703,10 +732,18 @@ function parseInventoryRows(table) {
 
   return table.rows
     .map((row, rowIndex) => {
-      const descriptor = cleanText(readCell(row, columns.nombre), 240);
-      const price = parsePrice(readCell(row, columns.precio));
+      const rowId = cleanText(readCell(row, columns.id), 60);
+      const displayName = cleanText(readCell(row, columns.nombre), 240);
+      const descriptor = cleanText(
+        readCell(row, columns.descriptor) || displayName,
+        300
+      );
+      const price =
+        parsePrice(readCell(row, columns.precio)) ||
+        PUBLISHED_PRICE_FALLBACKS.get(rowId) ||
+        0;
 
-      if (!descriptor || price <= 0) {
+      if (!displayName || price <= 0) {
         return null;
       }
 
@@ -719,7 +756,7 @@ function parseInventoryRows(table) {
       );
       const occasion = cleanText(readCell(row, columns.ocasion), 100);
       const productName = columns.hasSemanticName
-        ? toDisplayCase(descriptor)
+        ? toDisplayCase(displayName)
         : extractProductName(descriptor);
       const brand = explicitBrand
         ? toDisplayCase(explicitBrand)
@@ -728,6 +765,7 @@ function parseInventoryRows(table) {
         ? normalizeAudience(explicitAudience)
         : normalizeAudience(descriptor);
       const enrichment = getFragranticaEnrichment(
+        descriptor,
         productName,
         brand,
         audience
@@ -741,18 +779,21 @@ function parseInventoryRows(table) {
         .join(" ");
 
       return {
-        id: cleanText(readCell(row, columns.id), 60) || String(rowIndex + 1),
+        id: rowId || String(rowIndex + 1),
         nombre: productName || `Fragancia ${rowIndex + 1}`,
         marca: brand,
         audiencia: audience,
         precio: price,
         imagen: resolveProductImage(
           readCell(row, columns.imagen),
-          descriptor,
           enrichment?.fallbackImg
         ),
         notas: notes,
-        descripcion: buildDescription(rawDescription, rawNotes, occasion),
+        descripcion: buildDescription(
+          enrichment?.descripcion || rawDescription,
+          rawNotes,
+          occasion
+        ),
         searchText: normalizeText(
           `${descriptor} ${brand} ${rawDescription} ${rawNotes} ` +
           `${occasion} ${searchableNotes}`
@@ -1035,6 +1076,7 @@ function clearNoteSelection() {
   }
 
   appState.selectedNotes = [];
+  currentPage = 1;
   saveState();
   updateNoteSummary();
 
@@ -1075,14 +1117,10 @@ function getFilteredProducts() {
     return firstProduct.sourceOrder - secondProduct.sourceOrder;
   });
 
-  return {
-    total: matchingProducts.length,
-    // La vista nunca supera las 12 tarjetas exigidas por la especificación.
-    visible: matchingProducts.slice(0, 12)
-  };
+  return matchingProducts;
 }
 
-function updateResultCount(total, visibleTotal) {
+function updateResultCount(total, visibleTotal, firstVisible) {
   let label;
 
   if (total === 0) {
@@ -1091,7 +1129,8 @@ function updateResultCount(total, visibleTotal) {
     label = "1 fragancia encontrada";
   } else if (total > visibleTotal) {
     label =
-      `Mostrando ${integerFormatter.format(visibleTotal)} de ` +
+      `Mostrando ${integerFormatter.format(firstVisible)}–` +
+      `${integerFormatter.format(firstVisible + visibleTotal - 1)} de ` +
       `${integerFormatter.format(total)} fragancias`;
   } else {
     label = `${integerFormatter.format(total)} fragancias encontradas`;
@@ -1104,8 +1143,28 @@ function updateResultCount(total, visibleTotal) {
   );
 }
 
+function renderPagination(total) {
+  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
+  currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+
+  elements.pagination.hidden = totalPages <= 1;
+  elements.previousPageButton.disabled = currentPage === 1;
+  elements.nextPageButton.disabled = currentPage === totalPages;
+  elements.pageNumber.max = String(totalPages);
+  elements.pageNumber.value = String(currentPage);
+  elements.pageTotal.textContent = `de ${integerFormatter.format(totalPages)}`;
+}
+
 function renderCatalog() {
-  const { total, visible } = getFilteredProducts();
+  const matchingProducts = getFilteredProducts();
+  const total = matchingProducts.length;
+  const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
+  currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const firstVisibleIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const visible = matchingProducts.slice(
+    firstVisibleIndex,
+    firstVisibleIndex + PRODUCTS_PER_PAGE
+  );
   const fragment = document.createDocumentFragment();
 
   elements.productGrid.setAttribute("aria-busy", "true");
@@ -1120,7 +1179,8 @@ function renderCatalog() {
    */
   elements.productGrid.replaceChildren(fragment);
   elements.emptyState.hidden = total !== 0;
-  updateResultCount(total, visible.length);
+  updateResultCount(total, visible.length, firstVisibleIndex + 1);
+  renderPagination(total);
   elements.productGrid.setAttribute("aria-busy", "false");
 }
 
@@ -1201,6 +1261,7 @@ function updateFilters() {
     selectedNotes: getSelectedNotes()
   };
 
+  currentPage = 1;
   saveState();
   updateNoteSummary();
 
@@ -1219,6 +1280,7 @@ function clearFilters() {
     selectedNotes: []
   };
 
+  currentPage = 1;
   elements.noteSearch.value = "";
   filterNoteOptions();
   syncControlsWithState();
@@ -1235,6 +1297,28 @@ function toggleTheme() {
   appState.theme = appState.theme === "dark" ? "light" : "dark";
   applyTheme(appState.theme);
   saveState();
+}
+
+function changePage(nextPage) {
+  const totalPages = Math.max(
+    1,
+    Math.ceil(getFilteredProducts().length / PRODUCTS_PER_PAGE)
+  );
+  const parsedPage = Number.parseInt(nextPage, 10);
+
+  if (!Number.isFinite(parsedPage)) {
+    elements.pageNumber.value = String(currentPage);
+    return;
+  }
+
+  currentPage = Math.min(Math.max(parsedPage, 1), totalPages);
+  renderCatalog();
+  document.querySelector("#catalogo").scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start"
+  });
 }
 
 async function loadInventory() {
@@ -1259,6 +1343,7 @@ async function loadInventory() {
     }
 
     inventory = parsedInventory;
+    currentPage = 1;
     populateBrandOptions();
     populateNoteOptions();
     syncControlsWithState();
@@ -1272,6 +1357,7 @@ async function loadInventory() {
       return;
     }
 
+    console.error("No se pudo cargar el inventario de Google Sheets.", error);
     inventory = [];
     elements.resultCount.textContent = "Inventario no disponible";
     elements.sourceNote.textContent =
@@ -1302,6 +1388,21 @@ function initializeApp() {
   elements.noteSearch.addEventListener("input", filterNoteOptions);
   elements.clearNotesButton.addEventListener("click", clearNoteSelection);
   elements.clearButton.addEventListener("click", clearFilters);
+  elements.previousPageButton.addEventListener("click", () => {
+    changePage(currentPage - 1);
+  });
+  elements.nextPageButton.addEventListener("click", () => {
+    changePage(currentPage + 1);
+  });
+  elements.pageNumber.addEventListener("change", () => {
+    changePage(elements.pageNumber.value);
+  });
+  elements.pageNumber.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      changePage(elements.pageNumber.value);
+    }
+  });
   elements.themeButton.addEventListener("click", toggleTheme);
 
   loadInventory();

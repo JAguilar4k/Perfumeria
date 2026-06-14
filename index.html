@@ -15,7 +15,7 @@
   >
   <title>Archivum Parfums | Catálogo de fragancias</title>
   <link rel="stylesheet" href="css/styles.css">
-  <script src="js/catalog-images.js" defer></script>
+  <script src="js/fragrantica-enrichment.js" defer></script>
   <script src="js/app.js" defer></script>
 </head>
 
@@ -211,6 +211,41 @@
         <p class="empty-state" id="empty-state" hidden>
           No encontramos fragancias con esos filtros. Probá con otra combinación.
         </p>
+
+        <nav
+          class="catalog-pagination"
+          id="catalog-pagination"
+          aria-label="Páginas del catálogo"
+          hidden
+        >
+          <button
+            class="secondary-button"
+            id="previous-page"
+            type="button"
+          >
+            Anterior
+          </button>
+
+          <label class="page-selector" for="page-number">
+            <span>Página</span>
+            <input
+              id="page-number"
+              type="number"
+              min="1"
+              value="1"
+              inputmode="numeric"
+            >
+            <span id="page-total">de 1</span>
+          </label>
+
+          <button
+            class="secondary-button"
+            id="next-page"
+            type="button"
+          >
+            Siguiente
+          </button>
+        </nav>
       </div>
     </section>
 

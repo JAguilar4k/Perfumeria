@@ -759,6 +759,43 @@ h3 {
   text-align: center;
 }
 
+.catalog-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+  gap: 0.75rem;
+}
+
+.catalog-pagination[hidden] {
+  display: none;
+}
+
+.catalog-pagination .secondary-button {
+  flex: 1 1 7rem;
+  max-width: 10rem;
+}
+
+.page-selector {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 800;
+  gap: 0.45rem;
+}
+
+.page-selector input {
+  width: 4.5rem;
+  min-height: 2.75rem;
+  padding: 0.4rem;
+  border: 0.125rem solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-background);
+  color: var(--color-text);
+  font-weight: 800;
+  text-align: center;
+}
+
 .status-card {
   grid-column: 1 / -1;
 }
@@ -897,6 +934,10 @@ h3 {
 
   .note-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .catalog-pagination {
+    flex-wrap: nowrap;
   }
 
   .note-option:nth-child(odd):not(:last-child) {

@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "files": 2661,
+    "invalid": 0,
+    "sizes": {
+      "760x600": 2661
+    },
+    "uniqueHashes": 2560,
+    "verifiedRealImages": 1650,
+    "downloadedFromFragrantica": 873,
+    "keptExistingMatched": 244,
+    "labeledFallbackCards": 1011
+  },
+  "invalid": []
+}
