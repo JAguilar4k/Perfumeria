@@ -839,6 +839,33 @@ h3 {
   color: var(--color-text-muted);
 }
 
+.contact-details {
+  display: grid;
+  padding: 1rem;
+  border-left: 0.25rem solid var(--color-primary);
+  background: var(--color-surface);
+  font-style: normal;
+  gap: 0.7rem;
+}
+
+.contact-details span {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.contact-details strong {
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contact-details a {
+  min-height: auto;
+  width: fit-content;
+  font-weight: 800;
+}
+
 .site-footer {
   padding-block: 1.5rem;
   border-top: 0.0625rem solid var(--color-border);
@@ -929,7 +956,21 @@ h3 {
   }
 
   .contact-layout {
-    grid-template-columns: 1.1fr 1fr auto;
+    grid-template-columns: 1.1fr minmax(15rem, 0.9fr) auto;
+  }
+
+  .contact-layout > p {
+    grid-column: 1;
+  }
+
+  .contact-details {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .contact-layout > .primary-link {
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 
   .note-options {
