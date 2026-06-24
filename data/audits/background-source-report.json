@@ -1,0 +1,18 @@
+[
+  {
+    "theme": "dark",
+    "label": "Kilian Black Phantom - Memento Mori",
+    "sourcePage": "https://www.fragrantica.com/perfume/By-Kilian/Black-Phantom-43632.html",
+    "source": "https://fimgs.net/mdimg/perfume/375x500.43632.jpg",
+    "target": "img/bg-dark.jpg",
+    "bytes": 67187
+  },
+  {
+    "theme": "clear",
+    "label": "Versace Eros Energy EDP 100 ml",
+    "sourcePage": "https://www.versace.com/us/en/men/accessories/fragrances-body-care/eros-energy/eros-energy-edp-100-ml-yellow/R742010-R100MLS_RNUL.html",
+    "source": "img/perfumes/eros_energy_hombre_100ml_edp_versace_706de4dff0.webp",
+    "target": "img/bg-clear.jpg",
+    "bytes": 75776
+  }
+]

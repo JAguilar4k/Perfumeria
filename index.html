@@ -14,6 +14,7 @@
     content="Explorá un inventario vivo de fragancias premium en Costa Rica."
   >
   <title>Archivum Parfums | Catálogo de fragancias</title>
+  <link rel="icon" type="image/jpeg" href="img/perfumes/lord_of_flames_dragon.jpg">
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/fragrantica-enrichment.js" defer></script>
   <script src="js/app.js" defer></script>
@@ -108,7 +109,7 @@
             </div>
 
             <div class="field">
-              <label for="audience">Público objetivo</label>
+              <label for="audience">Público Objetivo</label>
               <select id="audience" name="audience">
                 <option value="todas">Todas las audiencias</option>
                 <option value="masculino">Masculino</option>
@@ -133,6 +134,24 @@
               </select>
             </div>
           </div>
+
+          <fieldset class="usage-filter" aria-describedby="usage-help">
+            <legend>Momento de uso</legend>
+            <p class="usage-help" id="usage-help">
+              Seleccioná Día, Noche o ambos para cruzar el perfil de uso con
+              audiencia, marca y notas.
+            </p>
+            <div class="usage-options">
+              <label class="usage-option">
+                <input id="usage-day" name="usage" type="checkbox" value="dia">
+                <span>Día</span>
+              </label>
+              <label class="usage-option">
+                <input id="usage-night" name="usage" type="checkbox" value="noche">
+                <span>Noche</span>
+              </label>
+            </div>
+          </fieldset>
 
           <!--
             details mantiene el filtro compacto. Las opciones se crean desde
@@ -291,17 +310,5 @@
       <p>Catálogo en español de Costa Rica.</p>
     </div>
   </footer>
-
-  <!-- Componente independiente del footer y con destino externo seguro. -->
-  <a
-    class="floating-catalog"
-    href="https://docs.google.com/spreadsheets/d/1K0fPgNhIHEVGe-jXJEIzmcuIG8pJMCrmEe1aVFMM4xA/edit?usp=sharing"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Ver inventario completo en Google Sheets"
-  >
-    <span aria-hidden="true">↗</span>
-    <span>Mostrar catálogo</span>
-  </a>
 </body>
 </html>

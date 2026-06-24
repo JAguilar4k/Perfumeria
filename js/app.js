@@ -13,12 +13,94 @@ const PRODUCTS_PER_PAGE = 12;
 const VALID_AUDIENCES = new Set(["todas", "masculino", "femenino", "unisex"]);
 const VALID_SORTS = new Set(["original", "ascendente", "descendente"]);
 const VALID_THEMES = new Set(["light", "dark"]);
+const VALID_USAGE = new Set(["dia", "noche"]);
 const PUBLISHED_PRICE_FALLBACKS = new Map([
   ["AP-1438", 14500],
   ["AP-2177", 15000],
   ["AP-2503", 5500],
   ["AP-1564", 18000]
 ]);
+
+const GOLDEN_ENRICHMENT = Object.freeze({
+  "Dragon Collection Lord of Flames": {
+    notas: ["Oriental", "Especiado", "Amaderado"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/lord_of_flames_dragon.jpg",
+    descripcion: "Notas intensas de azafrán, canela y Oud de Camboya."
+  },
+  "Encore I Luniche": {
+    notas: ["Floral", "Cítrico", "Almizclado"],
+    uso: ["Día"],
+    imagen: "img/perfumes/luniche_encore.jpg",
+    descripcion: "Salida de bergamota fresca, corazón de jazmín y almizcle blanco."
+  },
+  "Tufaah Mujer Luniche": {
+    notas: ["Frutal", "Floral", "Gourmand"],
+    uso: ["Día", "Noche"],
+    imagen: "img/perfumes/luniche_tufaah.jpg",
+    descripcion: "Manzana caramelizada, praliné dulce, vainilla y peonías."
+  },
+  "Crown Hombre Matin Martin": {
+    notas: ["Cítrico", "Amaderado", "Especiado"],
+    uso: ["Día"],
+    imagen: "img/perfumes/matin_martin_crown.jpg",
+    descripcion: "Bergamota de Calabria, pimienta rosa y cedro profundo del Atlas."
+  },
+  "El Dorado Mujer Matin Martin": {
+    notas: ["Floral", "Frutal", "Oriental"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/matin_martin_eldorado.jpg",
+    descripcion: "Mandarina dulce, rosa de Damasco, jazmín egipcio y ámbar gris."
+  },
+  "Vanilla Creme Michael Malul": {
+    notas: ["Gourmand", "Oriental", "Almizclado"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/michael_malul_vanilla.jpg",
+    descripcion: "Crema de vainilla batida, azúcar moreno tostado y maderas de sándalo."
+  },
+  "Aristo Era Vorv": {
+    notas: ["Amaderado", "Oriental", "Cítrico"],
+    uso: ["Día"],
+    imagen: "img/perfumes/vorv_aristo.jpg",
+    descripcion: "Pomelo vibrante, acordes marinos, madera de sándalo y pachulí."
+  },
+  "Oud Imperial Noir Lord of Flames": {
+    notas: ["Amaderado", "Oriental", "Cuero"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/lord_of_flames_oud.jpg",
+    descripcion: "Incienso ahumado, madera de Oud pura, cuero rústico y ámbar negro."
+  },
+  "L'Étoile Rosé Luniche": {
+    notas: ["Floral", "Frutal", "Almizclado"],
+    uso: ["Día"],
+    imagen: "img/perfumes/luniche_etoile.jpg",
+    descripcion: "Frambuesa ácida, lichi exótico, pétalos de rosa fresca y almizcle."
+  },
+  "Blue Horizon Michael Malul": {
+    notas: ["Cítrico", "Amaderado", "Almizclado"],
+    uso: ["Día"],
+    imagen: "img/perfumes/michael_malul_blue.jpg",
+    descripcion: "Menta fresca triturada, limón de Sicilia, jengibre y vetiver terroso."
+  },
+  "Amber Myth Vorv": {
+    notas: ["Oriental", "Gourmand", "Especiado"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/vorv_amber.jpg",
+    descripcion: "Ámbar dorado, haba tonka resinosa, cardamomo y canela en rama."
+  },
+  "Saffron Spice Matin Martin": {
+    notas: ["Especiado", "Oriental", "Cuero"],
+    uso: ["Noche"],
+    imagen: "img/perfumes/matin_martin_saffron.jpg",
+    descripcion: "Azafrán negro de salida, violeta, cuero fino y maderas oscuras."
+  },
+  "Wild Bergamot Lord of Flames": {
+    notas: ["Cítrico", "Frutal", "Amaderado"],
+    uso: ["Día"],
+    imagen: "img/perfumes/lord_of_flames_bergamot.jpg",
+    descripcion: "Explosión cítrica de bergamota, hojas de té verde y cedro blanco."
+  }
+});
 
 /*
  * Taxonomía amplia de acordes inspirada en clasificaciones usadas por
@@ -65,6 +147,38 @@ const NOTE_KEYS_BY_LABEL = new Map(
   NOTE_DEFINITIONS.map((note) => [normalizeText(note.label), note.key])
 );
 
+const GOLDEN_ENRICHMENT_ALIASES = [
+  ["Dragon Collection Lord Of Flames", "Dragon Collection Lord of Flames"],
+  ["Dragon Collection Unisex 100ml Edp Lord Of Flames", "Dragon Collection Lord of Flames"],
+  ["Encore I Unisex 90ml Edp Luniche", "Encore I Luniche"],
+  ["Tufaah Mujer Luniche", "Tufaah Mujer Luniche"],
+  ["Tufaah Mujer 100ml Edp Luniche", "Tufaah Mujer Luniche"],
+  ["Crown Hombre Matin Martin", "Crown Hombre Matin Martin"],
+  ["Crown Hombre 100ml Edp Matin Martin", "Crown Hombre Matin Martin"],
+  ["El Dorado Mujer Matin Martin", "El Dorado Mujer Matin Martin"],
+  ["El Dorado Mujer 100ml Edp Matin Martin", "El Dorado Mujer Matin Martin"],
+  ["Vanilla Creme Mujer Michael Malul", "Vanilla Creme Michael Malul"],
+  ["Vanilla Creme Mujer 100ml Edp Michael Malul", "Vanilla Creme Michael Malul"],
+  ["Aristo Era Unisex Vorv", "Aristo Era Vorv"],
+  ["Aristo Era Unisex 100ml Edp Vorv", "Aristo Era Vorv"],
+  ["Oud Imperial Noir Lord Of Flames", "Oud Imperial Noir Lord of Flames"],
+  ["L'Etoile Rose Luniche", "L'Étoile Rosé Luniche"],
+  ["L'Étoile Rosé Luniche", "L'Étoile Rosé Luniche"],
+  ["Blue Horizon Michael Malul", "Blue Horizon Michael Malul"],
+  ["Amber Myth Vorv", "Amber Myth Vorv"],
+  ["Saffron Spice Matin Martin", "Saffron Spice Matin Martin"],
+  ["Wild Bergamot Lord Of Flames", "Wild Bergamot Lord of Flames"]
+];
+
+const GOLDEN_ENRICHMENT_BY_KEY = new Map([
+  ...Object.entries(GOLDEN_ENRICHMENT).map(([productKey, enrichment]) => {
+    return [normalizeText(productKey), enrichment];
+  }),
+  ...GOLDEN_ENRICHMENT_ALIASES.map(([alias, productKey]) => {
+    return [normalizeText(alias), GOLDEN_ENRICHMENT[productKey]];
+  })
+]);
+
 const FRAGRANTICA_ENRICHMENT_BY_KEY = new Map(
   Object.entries(fragranticaEnrichment).map(([productKey, enrichment]) => {
     return [normalizeText(productKey), enrichment];
@@ -83,6 +197,7 @@ const elements = {
   noteOptions: document.querySelector("#note-options"),
   noteSearch: document.querySelector("#note-search"),
   noteSummary: document.querySelector("#note-summary"),
+  usageInputs: Array.from(document.querySelectorAll('input[name="usage"]')),
   clearNotesButton: document.querySelector("#clear-notes"),
   clearButton: document.querySelector("#clear-filters"),
   productGrid: document.querySelector("#product-grid"),
@@ -115,6 +230,7 @@ const defaultState = {
   brand: "todas",
   sort: "original",
   selectedNotes: [],
+  selectedUsage: [],
   theme: getPreferredTheme()
 };
 
@@ -152,6 +268,9 @@ function loadState() {
     const safeNotes = Array.isArray(parsedValue.selectedNotes)
       ? parsedValue.selectedNotes.filter((note) => NOTE_KEYS.has(note))
       : [];
+    const safeUsage = Array.isArray(parsedValue.selectedUsage)
+      ? parsedValue.selectedUsage.filter((usage) => VALID_USAGE.has(usage))
+      : [];
 
     return {
       search: typeof parsedValue.search === "string"
@@ -167,6 +286,7 @@ function loadState() {
         ? parsedValue.sort
         : defaultState.sort,
       selectedNotes: [...new Set(safeNotes)],
+      selectedUsage: [...new Set(safeUsage)],
       theme: VALID_THEMES.has(parsedValue.theme)
         ? parsedValue.theme
         : defaultState.theme
@@ -643,6 +763,14 @@ function getFragranticaEnrichment(descriptor, productName, brand, audience) {
   ];
 
   for (const candidate of lookupCandidates) {
+    const enrichment = GOLDEN_ENRICHMENT_BY_KEY.get(normalizeText(candidate));
+
+    if (enrichment) {
+      return enrichment;
+    }
+  }
+
+  for (const candidate of lookupCandidates) {
     const enrichment = FRAGRANTICA_ENRICHMENT_BY_KEY.get(
       normalizeText(candidate)
     );
@@ -660,13 +788,42 @@ function mergeProductNotes(inferredNotes, enrichment) {
     return inferredNotes;
   }
 
-  const enrichedNotes = enrichment.notas
+  const enrichedNotes = (Array.isArray(enrichment.notas) ? enrichment.notas : [])
     .map((noteLabel) => NOTE_KEYS_BY_LABEL.get(normalizeText(noteLabel)))
     .filter((noteKey) => NOTE_KEYS.has(noteKey));
 
   return enrichedNotes.length > 0
     ? [...new Set(enrichedNotes)]
     : inferredNotes;
+}
+
+function resolveUsage(notes, descriptor, rawDescription, enrichment) {
+  const enrichedUsage = Array.isArray(enrichment?.uso)
+    ? enrichment.uso
+        .map((usage) => normalizeText(usage))
+        .map((usage) => usage === "día" ? "dia" : usage)
+        .filter((usage) => VALID_USAGE.has(usage))
+    : [];
+
+  if (enrichedUsage.length > 0) {
+    return [...new Set(enrichedUsage)];
+  }
+
+  const usageSource = normalizeText(`${descriptor} ${rawDescription}`);
+
+  if (/\b(noche|night|nocturn|intense|black|noir|oud|cuero|tabaco)\b/.test(usageSource)) {
+    return ["noche"];
+  }
+
+  if (notes.some((note) => ["oriental", "gourmand", "cuero", "tabaco"].includes(note))) {
+    return ["noche"];
+  }
+
+  if (notes.some((note) => ["citrico", "fresco", "acuatico", "verde", "marino"].includes(note))) {
+    return ["dia"];
+  }
+
+  return ["dia", "noche"];
 }
 
 function sanitizeImageSource(value) {
@@ -693,22 +850,43 @@ function sanitizeImageSource(value) {
   }
 }
 
-function resolveProductImage(sheetImage, enrichmentFallback = "") {
+function slugifyAssetPart(value) {
+  return normalizeText(value)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function buildDynamicImagePath(productName, brand) {
+  const brandSlug = slugifyAssetPart(brand);
+  const productSlug = slugifyAssetPart(productName);
+  const fileName = [brandSlug, productSlug].filter(Boolean).join("_");
+
+  return fileName
+    ? `img/perfumes/${fileName}.jpg`
+    : "img/perfumes/fragancia_archivum.jpg";
+}
+
+function resolveProductImage(
+  sheetImage,
+  enrichmentFallback = "",
+  productName = "",
+  brand = ""
+) {
+  const enrichmentImageSource = sanitizeImageSource(enrichmentFallback);
+  if (enrichmentImageSource) {
+    return enrichmentImageSource;
+  }
+
   const sheetImageSource = sanitizeImageSource(sheetImage);
 
   if (sheetImageSource) {
     return sheetImageSource;
   }
 
-  const enrichmentImageSource = sanitizeImageSource(enrichmentFallback);
-  if (enrichmentImageSource) {
-    return enrichmentImageSource;
-  }
-
-  return "";
+  return buildDynamicImagePath(productName, brand);
 }
 
-function buildDescription(rawDescription, rawNotes, occasion) {
+function buildDescription(rawDescription, rawNotes, occasion, brand) {
   const description = cleanText(rawDescription, 280);
 
   if (description) {
@@ -724,7 +902,8 @@ function buildDescription(rawDescription, rawNotes, occasion) {
       : noteDescription;
   }
 
-  return "Consultá los detalles y la disponibilidad en el inventario oficial.";
+  const brandLabel = cleanText(brand, 80) || "Inédita";
+  return `Fragancia premium de la casa ${brandLabel}, mapeada dinámicamente al catálogo.`;
 }
 
 function parseInventoryRows(table) {
@@ -770,12 +949,17 @@ function parseInventoryRows(table) {
         brand,
         audience
       );
+      const inferredNotes = extractNotes(rawNotes, descriptor, rawDescription);
       const notes = mergeProductNotes(
-        extractNotes(rawNotes, descriptor, rawDescription),
+        inferredNotes.length > 0 ? inferredNotes : ["amaderado"],
         enrichment
       );
       const searchableNotes = notes
         .map((note) => NOTE_LABELS.get(note) ?? note)
+        .join(" ");
+      const usage = resolveUsage(notes, descriptor, rawDescription, enrichment);
+      const searchableUsage = usage
+        .map((usageValue) => usageValue === "dia" ? "Día" : "Noche")
         .join(" ");
 
       return {
@@ -786,17 +970,21 @@ function parseInventoryRows(table) {
         precio: price,
         imagen: resolveProductImage(
           readCell(row, columns.imagen),
-          enrichment?.fallbackImg
+          enrichment?.imagen || enrichment?.fallbackImg,
+          productName,
+          brand
         ),
         notas: notes,
+        uso: usage,
         descripcion: buildDescription(
           enrichment?.descripcion || rawDescription,
           rawNotes,
-          occasion
+          occasion,
+          brand
         ),
         searchText: normalizeText(
           `${descriptor} ${brand} ${rawDescription} ${rawNotes} ` +
-          `${occasion} ${searchableNotes}`
+          `${occasion} ${searchableNotes} ${searchableUsage}`
         ),
         sourceOrder: rowIndex
       };
@@ -887,6 +1075,11 @@ function createProductCard(product) {
   const meta = document.createElement("div");
   meta.className = "product-meta";
 
+  const usage = createTextElement(
+    "span",
+    "product-usage",
+    product.uso.map((usageValue) => usageValue === "dia" ? "Día" : "Noche").join(" / ")
+  );
   const audience = createTextElement(
     "span",
     "product-audience",
@@ -898,7 +1091,7 @@ function createProductCard(product) {
     priceFormatter.format(product.precio)
   );
 
-  meta.append(audience, price);
+  meta.append(audience, usage, price);
   body.append(meta);
   article.append(visual, body);
 
@@ -1070,6 +1263,12 @@ function getSelectedNotes() {
     .map((input) => input.value);
 }
 
+function getSelectedUsage() {
+  return elements.usageInputs
+    .filter((input) => input.checked && VALID_USAGE.has(input.value))
+    .map((input) => input.value);
+}
+
 function clearNoteSelection() {
   for (const input of getNoteInputs()) {
     input.checked = false;
@@ -1101,8 +1300,17 @@ function getFilteredProducts() {
     const matchesNotes =
       appState.selectedNotes.length === 0 ||
       appState.selectedNotes.some((note) => product.notas.includes(note));
+    const matchesUsage =
+      appState.selectedUsage.length === 0 ||
+      appState.selectedUsage.some((usage) => product.uso.includes(usage));
 
-    return matchesSearch && matchesAudience && matchesBrand && matchesNotes;
+    return (
+      matchesSearch &&
+      matchesAudience &&
+      matchesBrand &&
+      matchesNotes &&
+      matchesUsage
+    );
   });
 
   matchingProducts.sort((firstProduct, secondProduct) => {
@@ -1161,10 +1369,8 @@ function renderCatalog() {
   const totalPages = Math.max(1, Math.ceil(total / PRODUCTS_PER_PAGE));
   currentPage = Math.min(Math.max(currentPage, 1), totalPages);
   const firstVisibleIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
-  const visible = matchingProducts.slice(
-    firstVisibleIndex,
-    firstVisibleIndex + PRODUCTS_PER_PAGE
-  );
+  const pageWindow = matchingProducts.slice(firstVisibleIndex);
+  const visible = pageWindow.slice(0, 12);
   const fragment = document.createDocumentFragment();
 
   elements.productGrid.setAttribute("aria-busy", "true");
@@ -1217,6 +1423,8 @@ function applyTheme(theme) {
   const isDark = theme === "dark";
 
   document.documentElement.dataset.theme = theme;
+  document.body.classList.toggle("dark-theme", isDark);
+  document.body.classList.toggle("light-theme", !isDark);
   elements.themeButton.setAttribute("aria-pressed", String(isDark));
   elements.themeButton.setAttribute(
     "aria-label",
@@ -1244,6 +1452,10 @@ function syncControlsWithState() {
     input.checked = appState.selectedNotes.includes(input.value);
   }
 
+  for (const input of elements.usageInputs) {
+    input.checked = appState.selectedUsage.includes(input.value);
+  }
+
   updateNoteSummary();
 }
 
@@ -1258,7 +1470,8 @@ function updateFilters() {
     sort: VALID_SORTS.has(elements.sort.value)
       ? elements.sort.value
       : "original",
-    selectedNotes: getSelectedNotes()
+    selectedNotes: getSelectedNotes(),
+    selectedUsage: getSelectedUsage()
   };
 
   currentPage = 1;
@@ -1277,7 +1490,8 @@ function clearFilters() {
     audience: "todas",
     brand: "todas",
     sort: "original",
-    selectedNotes: []
+    selectedNotes: [],
+    selectedUsage: []
   };
 
   currentPage = 1;
@@ -1386,6 +1600,9 @@ function initializeApp() {
   elements.brand.addEventListener("change", updateFilters);
   elements.sort.addEventListener("change", updateFilters);
   elements.noteSearch.addEventListener("input", filterNoteOptions);
+  for (const input of elements.usageInputs) {
+    input.addEventListener("change", updateFilters);
+  }
   elements.clearNotesButton.addEventListener("click", clearNoteSelection);
   elements.clearButton.addEventListener("click", clearFilters);
   elements.previousPageButton.addEventListener("click", () => {

@@ -1,0 +1,15 @@
+{
+  "summary": {
+    "originalFallbackCards": 1011,
+    "processed": 1011,
+    "replacedWithWebImages": 1011,
+    "remainingFallbackCards": 0,
+    "failures": 0,
+    "byResult": {
+      "processed": 1011,
+      "elapsedSeconds": 1487.77,
+      "downloaded": 1011
+    }
+  },
+  "failures": []
+}
